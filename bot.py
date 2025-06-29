@@ -30,6 +30,8 @@ class TeamsBot(ActivityHandler):
     async def on_message_activity(self, turn_context: TurnContext):
         prompt = turn_context.activity.text.lower()
         url = get_matching_url(prompt)
+        print("Received prompt:", prompt)
+        print("Matched URL:", url)
         if url:
             await capture_screenshot(url)
             with open("screenshot.png", "rb") as img:
