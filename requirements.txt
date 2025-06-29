@@ -3,3 +3,4 @@ playwright
 botbuilder-core
 botbuilder-schema
 aiohttp
+dotenv

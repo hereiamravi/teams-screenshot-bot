@@ -1,14 +1,17 @@
+import os
 from botbuilder.core import ActivityHandler, TurnContext, MessageFactory
 from botbuilder.schema import Activity, Attachment
 import asyncio
 from playwright.async_api import async_playwright
 import base64
 from difflib import get_close_matches
+from dotenv import load_dotenv
 
+load_dotenv()
 # Simple mapping
 SITE_MAP = {
     "sales": "https://google.com/",
-    "support": "https://facebook.com/",
+    "facebook": "https://www.facebook.com/",
 }
 
 def get_matching_url(prompt):
@@ -20,11 +23,23 @@ def get_matching_url(prompt):
 
 async def capture_screenshot(url):
     async with async_playwright() as p:
-        browser = await p.chromium.launch()
+        browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
+
         await page.goto(url)
+        if "facebook.com" in url:
+            await login_facebook(page)
+
         await page.screenshot(path="screenshot.png")
         await browser.close()
+
+
+async def login_facebook(page):
+    await page.goto("https://www.facebook.com/")
+    await page.fill('input[name="email"]', os.getenv("FB_USERNAME"))
+    await page.fill('input[name="pass"]', os.getenv("FB_PASSWORD"))
+    await page.click('button[name="login"]')
+    await page.wait_for_load_state('networkidle')  # Wait until page is fully loaded
 
 class TeamsBot(ActivityHandler):
     async def on_message_activity(self, turn_context: TurnContext):
@@ -39,10 +54,13 @@ class TeamsBot(ActivityHandler):
             attachment = Attachment(
                 name="screenshot.png",
                 content_type="image/png",
-                content_url=f"data:image/png;base64,{base64_img}"
+                content=base64_img
             )
             reply = MessageFactory.attachment(attachment)
-            await turn_context.send_activity(reply)
+            reply_text = f"Screenshot taken for: {url}"
+            reply.text = reply_text
+            print("Bot Response:", reply_text)
+            await turn_context.send_activity(reply_text)
             return
         else:
             await turn_context.send_activity("I couldn't match that request. Try using keywords like 'sales' or 'support'.")
