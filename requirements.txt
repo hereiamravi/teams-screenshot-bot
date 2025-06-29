@@ -1,0 +1,5 @@
+flask
+playwright
+botbuilder-core
+botbuilder-schema
+aiohttp
